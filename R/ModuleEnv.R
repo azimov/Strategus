@@ -59,10 +59,14 @@ withModuleRenv <- function(code,
                 script)
   }
 
-  # Enforce attachment of keyring from calling process - not one inside the renv
+  # Enforce attachment of keyring and dependencies
+  # from calling process - not one inside the renv
   if (useLocalKeyringLibrary) {
     libPath <- file.path(find.package("keyring"), "../")
     script <- c(sprintf("library(keyring, lib.loc = '%s')", libPath),
+                script)
+    libPath <- file.path(find.package("openssl"), "../")
+    script <- c(sprintf("library(openssl, lib.loc = '%s')", libPath),
                 script)
   }
 
