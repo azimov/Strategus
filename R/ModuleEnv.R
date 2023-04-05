@@ -41,6 +41,7 @@ withModuleRenv <- function(code,
                            injectVars = list(),
                            tempScriptFile = tempfile(fileext = ".R"),
                            useLocalStrategusLibrary = TRUE,
+                           useLocalKeyringLibrary = TRUE,
                            job = FALSE,
                            processName = paste(moduleFolder, "_renv_run")) {
   # convert human readable code to a string for writing
@@ -55,6 +56,13 @@ withModuleRenv <- function(code,
   if (useLocalStrategusLibrary) {
     libPath <- file.path(find.package("Strategus"), "../")
     script <- c(sprintf("library(Strategus, lib.loc = '%s')", libPath),
+                script)
+  }
+
+  # Enforce attachment of keyring from calling process - not one inside the renv
+  if (useLocalKeyringLibrary) {
+    libPath <- file.path(find.package("keyring"), "../")
+    script <- c(sprintf("library(keyring, lib.loc = '%s')", libPath),
                 script)
   }
 
