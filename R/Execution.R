@@ -90,53 +90,6 @@ execute <- function(analysisSpecifications,
 
 generateTargetsScript <- function(analysisSpecifications, executionSettings, dependencies, executionScriptFolder, keyringName, restart) {
   fileName <- file.path(executionScriptFolder, "script.R")
-
-  # Note: In the event that a user has opted to restart the analysis,
-  # we will want to store these settings into their respective RDS objects
-  # before starting the targets script. This will allow for updates to the
-  # various settings and upon restart targets will re-evaluate the inputs
-  # and if they have changed it will re-run if necessary
-  analysisSpecificationsFileName <- gsub("\\\\", "/", file.path(executionScriptFolder, "analysisSpecifications.rds"))
-  saveRDS(analysisSpecifications, analysisSpecificationsFileName)
-  executionSettingsFileName <- gsub("\\\\", "/", file.path(executionScriptFolder, "executionSettings.rds"))
-  saveRDS(executionSettings, executionSettingsFileName)
-  keyringSettingsFileName <- gsub("\\\\", "/", file.path(executionScriptFolder, "keyringSettings.rds"))
-  saveRDS(list(keyringName = keyringName), keyringSettingsFileName)
-
-  # Generate target names by module type
-  moduleToTargetNames <- list()
-  for (i in 1:length(analysisSpecifications$moduleSpecifications)) {
-    moduleSpecification <- analysisSpecifications$moduleSpecifications[[i]]
-    targetName <- sprintf("%s_%d", moduleSpecification$module, i)
-    moduleToTargetNames[[length(moduleToTargetNames) + 1]] <- tibble(
-      module = moduleSpecification$module,
-      targetName = targetName
-    )
-  }
-  moduleToTargetNames <- bind_rows(moduleToTargetNames)
-  moduleToTargetNamesFileName <- gsub("\\\\", "/", file.path(executionScriptFolder, "moduleTargetNames.rds"))
-  saveRDS(moduleToTargetNames, moduleToTargetNamesFileName)
-
-  dependenciesFileName <- gsub("\\\\", "/", file.path(executionScriptFolder, "dependencies.rds"))
-  saveRDS(dependencies, dependenciesFileName)
-
-  execResultsUpload <- all(c(is(executionSettings, "CdmExecutionSettings"),
-                             !is.null(executionSettings$resultsConnectionDetailsReference),
-                             !is.null(executionSettings$resultsDatabaseSchema)))
-
-  # Settings required inside script. There is probably a much cleaner way of doing this
-  writeLines(c(
-    sprintf("analysisSpecificationsFileName <- '%s'", analysisSpecificationsFileName),
-    sprintf("executionSettingsFileName <- '%s'", executionSettingsFileName),
-    sprintf("keyringSettingsFileName <- '%s'", keyringSettingsFileName),
-    sprintf("moduleToTargetNamesFileName <- '%s'", moduleToTargetNamesFileName),
-    sprintf("dependenciesFileName <- '%s'", dependenciesFileName),
-    sprintf("execResultsUpload <- '%s'", execResultsUpload),
-    readLines(fileName)
-  ), fileName)
-
-  # If we are restarting there is no need to re-generate the targets
-  # script so exit this function.
   if (restart) {
     return(fileName)
   }
@@ -192,6 +145,46 @@ generateTargetsScript <- function(analysisSpecifications, executionSettings, dep
 
     targetList
   }, script = fileName)
+
+  #Store settings objects in the temp folder so they are available in targets
+  analysisSpecificationsFileName <- gsub("\\\\", "/", file.path(executionScriptFolder, "analysisSpecifications.rds"))
+  saveRDS(analysisSpecifications, analysisSpecificationsFileName)
+  executionSettingsFileName <- gsub("\\\\", "/", file.path(executionScriptFolder, "executionSettings.rds"))
+  saveRDS(executionSettings, executionSettingsFileName)
+  keyringSettingsFileName <- gsub("\\\\", "/", file.path(executionScriptFolder, "keyringSettings.rds"))
+  saveRDS(list(keyringName = keyringName), keyringSettingsFileName)
+
+  # Generate target names by module type
+  moduleToTargetNames <- list()
+  for (i in 1:length(analysisSpecifications$moduleSpecifications)) {
+    moduleSpecification <- analysisSpecifications$moduleSpecifications[[i]]
+    targetName <- sprintf("%s_%d", moduleSpecification$module, i)
+    moduleToTargetNames[[length(moduleToTargetNames) + 1]] <- tibble(
+      module = moduleSpecification$module,
+      targetName = targetName
+    )
+  }
+  moduleToTargetNames <- bind_rows(moduleToTargetNames)
+  moduleToTargetNamesFileName <- gsub("\\\\", "/", file.path(executionScriptFolder, "moduleTargetNames.rds"))
+  saveRDS(moduleToTargetNames, moduleToTargetNamesFileName)
+
+  dependenciesFileName <- gsub("\\\\", "/", file.path(executionScriptFolder, "dependencies.rds"))
+  saveRDS(dependencies, dependenciesFileName)
+  
+  execResultsUpload <- all(c(is(executionSettings, "CdmExecutionSettings"),
+                             !is.null(executionSettings$resultsConnectionDetailsReference),
+                             !is.null(executionSettings$resultsDatabaseSchema)))
+
+  # Settings required inside script. There is probably a much cleaner way of doing this
+  writeLines(c(
+    sprintf("analysisSpecificationsFileName <- '%s'", analysisSpecificationsFileName),
+    sprintf("executionSettingsFileName <- '%s'", executionSettingsFileName),
+    sprintf("keyringSettingsFileName <- '%s'", keyringSettingsFileName),
+    sprintf("moduleToTargetNamesFileName <- '%s'", moduleToTargetNamesFileName),
+    sprintf("dependenciesFileName <- '%s'", dependenciesFileName),
+    sprintf("execResultsUpload <- '%s'", execResultsUpload),
+    readLines(fileName)
+  ), fileName)
 
   return(fileName)
 }
